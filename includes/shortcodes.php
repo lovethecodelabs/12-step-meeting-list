@@ -95,3 +95,78 @@ if (!function_exists('tsml_regions_list')) {
     }
 }
 add_shortcode('tsml_regions_list', 'tsml_regions_list');
+
+function page_getallnew( $atts ) {
+        global $wpdb;
+        echo "<style>@media screen AND (min-width:600px){.Rtable{display:flex!important;flex-wrap:wrap;margin:0 0 0 0;padding:0}#navbars{text-align:center}.navbar select{display:none}section{padding:15px 15px 35px 15px}.footer >div >ul{display:flex;list-style-type:none;align-items:center;flex-direction:row;justify-content:center}.Rtable-cell{box-sizing:border-box;flex-grow:1;width:100%;padding:0.2em .4em;overflow:hidden;list-style:none;border:1px solid white;background:fade(slategrey,20%)}.Rtable-cell2{box-sizing:border-box;flex-grow:1;width:100%;padding:0.2em .4em;overflow:hidden;list-style:none;border:1px solid white;background:fade(slategrey,20%)}.Rtable--2cols > .Rtable-cell{width:50%}.Rtable--3cols > .Rtable-cell{width:33.33%}.Rtable--4cols > .Rtable-cell{width:25%}.Rtable--5cols > .Rtable-cell{width:20%}.Rtable--6cols > .Rtable-cell{width:16.6%}.Rtable--6cols > .Rtable-cell2{width:33.2%!important}}@media screen AND (max-width:600px){.Rtable{display:block;border:2px solid #000;border-radius:4px;margin:5px}.Rtable-cell{text-align:center}}</style>";
+    	    $mtAr = tsml_get_meetings();
+    	    // Obtain a list of columns
+            foreach ($mtAr as $key => $row) {
+                if ($row['day'] != '0') {
+                    $day[$key]  = $row['day'];
+                } else {
+                    $row['day'] = '7';
+                    $day[$key]  = $row['day'];
+                }
+                $loc[$key] = $row['region'];
+                $time[$key] = $row['time'];
+            }
+            // Sort the data 
+            array_multisort($day, SORT_ASC, $loc, SORT_ASC, $time,SORT_ASC, $mtAr);
+            $holder="";
+            echo "<section id='tables'>";
+            $holder= new meeting();
+            $current_region = '';
+    	    foreach ($mtAr as $i) {
+    	        echo var_dump($i);  // to test
+    	        $types = "";
+    	        foreach ($i['types'] as $t) {
+    	            $types.= $t."; ";
+    	        }
+    	        /** preferred codes
+    	        $types = str_replace("LGBTQ","G",$types);
+    	        $types = str_replace("SP","S",$types);
+    	        $types = str_replace("X","WA",$types); 
+    	        **/
+    	        
+    	        $dowMap = array( 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
+                if ($holder->get()!=$dowMap[$i['day']]) {
+                        echo '<hr id="'.$holder->get().'" class="sep" /><h2 style="text-align: left;" id="'.$holder->get().'" class="'.$holder->get().'">'.$holder->get().'</h2><hr class="sep" />'; 
+					} 
+                   
+				$adNumber = explode(",",$i['formatted_address']);
+
+				if ($i['location'] != $current_region) {
+					echo "<h5 style='margin-top: 15px;'>".$i['region']."</h5>";
+					$current_region = $i['region'];
+				}
+				echo '<div class="Rtable Rtable--6cols"><div class="Rtable-cell first" class="'.$dowMap[$i['day']].'"><a href="https://hacoaa.org/tsml_region/'.str_replace(' ','-',strtolower($i['region'])).'">'.$i['region'].'</a></div><div class="Rtable-cell"><!--<a class="easy-modal-open" href="#modal2" rel="nofollow" onclick="modalCreate(\"'.$dowMap[$i['day']].";;".$i['time_formatted'].";;".$i['name'].";;".str_replace(' ','+',$i['formatted_address']).'");"><i class="material-icons" style="font-size:24px;">place</i></a>-->'.' '.$i['time_formatted'].'</div>
+				<div class="Rtable-cell"><a href='.$i['url'].'><strong>'.$i['name'].'</strong></a>';
+				global $current_user;
+				wp_get_current_user();
+				if($current_user->ID == '1'||$current_user->ID == '3') {
+					echo ' <a href="/wp-admin/post.php?post='.$i['id'].'&action=edit">edit</a>';
+				}
+				echo  '</div><div class="Rtable-cell">'.$types.'</div>
+						<div class="Rtable-cell cell2"><a href='.$i['location_url']."'>".$i['location'].": ".$adNumber[0].'</a></div>
+						</div>';
+                
+                $holder->set($dowMap[$i['day']]);
+                if ($holder->get()!=$dowMap[$i['day']]) {
+                    echo '</div>';
+                }    
+    	    }
+            echo "</section>";
+}
+add_shortcode('tsml_meetingtable', 'page_getallnew');
+class meeting {
+    var $day = 'Mon';
+    
+    public function set($mt_day){
+        $this->day = $mt_day;
+    }
+    
+    public function get() {
+        return $this->day;
+    }
+}
